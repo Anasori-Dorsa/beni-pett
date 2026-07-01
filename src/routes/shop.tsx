@@ -39,7 +39,7 @@ function Shop() {
         brand: "Purely", price: "۷۲۰,۰۰۰" },
       { id: 5, img: productTreats, category: "treats" as Category,
         name: lang === "fa" ? "تشویقی سگ — طعم گوشت" : "Dog Treats — Beef",
-        brand: "Beni Bites", price: "۱۹۵,۰�000" },
+        brand: "Beni Bites", price: "۱۹۵,۰۰۰" },
       { id: 6, img: productTreats, category: "treats" as Category,
         name: lang === "fa" ? "تشویقی گربه — سالمون" : "Cat Treats — Salmon",
         brand: "Beni Bites", price: "۲۱۰,۰۰۰" },
