@@ -152,7 +152,7 @@ function Index() {
                     <span className="text-xs text-muted-foreground ms-1">{t("price_currency")}</span>
                   </div>
                 </div>
-                <button onClick={() => add(p, 1)} className="btn-ghost mt-3 text-xs !py-2 !px-4">{t("add_to_cart")}</button>
+                <button onClick={() => add({ id: p.id, name, price_toman: p.price_toman, image: img }, 1)} className="btn-ghost mt-3 text-xs !py-2 !px-4">{t("add_to_cart")}</button>
               </div>
             );
           })}
