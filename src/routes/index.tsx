@@ -137,18 +137,29 @@ function Index() {
         </div>
 
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((p, i) => (
+          {(featured.length > 0 ? featured : []).slice(0, 3).map((p) => {
+            const img = p.images?.[0] || fallback(p.slug);
+            const name = lang === "fa" ? p.name_fa : p.name_en;
+            return (
+              <div key={p.id} className="group block">
+                <Link to="/shop" className="relative overflow-hidden rounded-3xl bg-sand aspect-square block">
+                  <img src={img} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                </Link>
+                <div className="mt-5 flex items-start justify-between gap-4">
+                  <h3 className="font-display text-lg text-espresso">{name}</h3>
+                  <div className="text-espresso whitespace-nowrap">
+                    <span className="font-medium">{formatToman(p.price_toman, lang).replace(/\s*تومان|\s*Toman/g, "")}</span>
+                    <span className="text-xs text-muted-foreground ms-1">{t("price_currency")}</span>
+                  </div>
+                </div>
+                <button onClick={() => add(p, 1)} className="btn-ghost mt-3 text-xs !py-2 !px-4">{t("add_to_cart")}</button>
+              </div>
+            );
+          })}
+          {featured.length === 0 && [productDog, productCat, productTreats].map((img, i) => (
             <Link to="/shop" key={i} className="group block">
               <div className="relative overflow-hidden rounded-3xl bg-sand aspect-square">
-                <img src={p.img} alt={p.name} loading="lazy" width={1024} height={1024} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <span className="absolute top-4 start-4 bg-background/90 backdrop-blur px-3 py-1 rounded-full text-xs text-espresso">{p.tag}</span>
-              </div>
-              <div className="mt-5 flex items-start justify-between gap-4">
-                <h3 className="font-display text-lg text-espresso">{p.name}</h3>
-                <div className="text-espresso whitespace-nowrap">
-                  <span className="font-medium">{p.price}</span>
-                  <span className="text-xs text-muted-foreground ms-1">{t("price_currency")}</span>
-                </div>
+                <img src={img} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
               </div>
             </Link>
           ))}
