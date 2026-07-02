@@ -14,6 +14,9 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider } from "@/lib/i18n";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { CartProvider } from "@/lib/cart";
+import { CartDrawer } from "@/components/cart-drawer";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -122,9 +125,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <SiteHeader />
-        <Outlet />
-        <SiteFooter />
+        <CartProvider>
+          <SiteHeader />
+          <Outlet />
+          <SiteFooter />
+          <CartDrawer />
+          <Toaster position="top-center" richColors />
+        </CartProvider>
       </I18nProvider>
     </QueryClientProvider>
   );

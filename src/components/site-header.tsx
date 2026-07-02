@@ -1,8 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
+import { useCart } from "@/lib/cart";
+import { useAuth, useIsAdmin } from "@/lib/auth-hooks";
+import { supabase } from "@/integrations/supabase/client";
+import { ShoppingBag, User as UserIcon } from "lucide-react";
 
 export function SiteHeader() {
   const { t, lang, setLang } = useI18n();
+  const { count, open } = useCart();
+  const { user } = useAuth();
+  const { isAdmin } = useIsAdmin();
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/70 border-b border-border/50">
       <div className="container-page flex items-center justify-between h-20">
@@ -18,7 +25,10 @@ export function SiteHeader() {
           <Link to="/" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_home")}</Link>
           <Link to="/shop" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_shop")}</Link>
           <a href="#about" className="text-foreground/80 hover:text-foreground transition">{t("nav_about")}</a>
-          <a href="#contact" className="text-foreground/80 hover:text-foreground transition">{t("nav_contact")}</a>
+          <Link to="/contact" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_contact")}</Link>
+          {isAdmin && (
+            <Link to="/admin" className="text-clay hover:text-espresso transition font-medium">{t("nav_admin")}</Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-3">
@@ -32,7 +42,28 @@ export function SiteHeader() {
               className={`px-3 py-1 rounded-full transition ${lang === "en" ? "bg-espresso text-cream" : "text-foreground/70"}`}
             >EN</button>
           </div>
-          <Link to="/shop" className="btn-primary text-sm hidden sm:inline-flex">{t("cta_shop")}</Link>
+          <button
+            onClick={open}
+            aria-label={t("cart_title")}
+            className="relative grid place-items-center h-10 w-10 rounded-full border border-border hover:bg-sand transition"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            {count > 0 && (
+              <span className="absolute -top-1 -end-1 bg-espresso text-cream text-[10px] rounded-full min-w-5 h-5 px-1 grid place-items-center">
+                {count}
+              </span>
+            )}
+          </button>
+          {user ? (
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="text-sm text-foreground/70 hover:text-foreground hidden sm:inline"
+            >{t("nav_logout")}</button>
+          ) : (
+            <Link to="/auth" className="hidden sm:inline-flex items-center gap-1 text-sm text-foreground/70 hover:text-foreground">
+              <UserIcon className="h-4 w-4" /> {t("nav_login")}
+            </Link>
+          )}
         </div>
       </div>
     </header>
