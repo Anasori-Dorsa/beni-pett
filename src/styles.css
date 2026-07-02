@@ -215,3 +215,20 @@
     background: var(--sand);
   }
 }
+
+@utility input-base {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--foreground);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  &:focus {
+    outline: none;
+    border-color: var(--espresso);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--clay) 30%, transparent);
+  }
+}

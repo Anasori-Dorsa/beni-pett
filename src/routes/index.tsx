@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
+import { useCart } from "@/lib/cart";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFeaturedProducts } from "@/lib/products";
+import { formatToman } from "@/lib/format";
 import heroPets from "@/assets/hero-pets.jpg";
 import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
@@ -11,12 +15,15 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { t, lang } = useI18n();
+  const { add } = useCart();
+  const { data: featured = [] } = useQuery({ queryKey: ["featured"], queryFn: fetchFeaturedProducts });
 
-  const products = [
-    { img: productDog, name: lang === "fa" ? "غذای خشک سگ بالغ" : "Adult Dog Dry Food", price: "۸۹۰,۰۰۰", tag: lang === "fa" ? "سگ" : "Dog" },
-    { img: productCat, name: lang === "fa" ? "غذای خشک گربه" : "Premium Cat Dry Food", price: "۶۵۰,۰۰۰", tag: lang === "fa" ? "گربه" : "Cat" },
-    { img: productTreats, name: lang === "fa" ? "تشویقی مخصوص" : "Signature Treats", price: "۱۹۵,۰۰۰", tag: lang === "fa" ? "تشویقی" : "Treats" },
-  ];
+  function fallback(slug?: string | null) {
+    const s = (slug ?? "").toLowerCase();
+    if (s.includes("cat")) return productCat;
+    if (s.includes("treat")) return productTreats;
+    return productDog;
+  }
 
   const testimonials = lang === "fa"
     ? [
@@ -130,18 +137,29 @@ function Index() {
         </div>
 
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((p, i) => (
+          {(featured.length > 0 ? featured : []).slice(0, 3).map((p) => {
+            const img = p.images?.[0] || fallback(p.slug);
+            const name = lang === "fa" ? p.name_fa : p.name_en;
+            return (
+              <div key={p.id} className="group block">
+                <Link to="/shop" className="relative overflow-hidden rounded-3xl bg-sand aspect-square block">
+                  <img src={img} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                </Link>
+                <div className="mt-5 flex items-start justify-between gap-4">
+                  <h3 className="font-display text-lg text-espresso">{name}</h3>
+                  <div className="text-espresso whitespace-nowrap">
+                    <span className="font-medium">{formatToman(p.price_toman, lang).replace(/\s*تومان|\s*Toman/g, "")}</span>
+                    <span className="text-xs text-muted-foreground ms-1">{t("price_currency")}</span>
+                  </div>
+                </div>
+                <button onClick={() => add({ id: p.id, name, price_toman: p.price_toman, image: img }, 1)} className="btn-ghost mt-3 text-xs !py-2 !px-4">{t("add_to_cart")}</button>
+              </div>
+            );
+          })}
+          {featured.length === 0 && [productDog, productCat, productTreats].map((img, i) => (
             <Link to="/shop" key={i} className="group block">
               <div className="relative overflow-hidden rounded-3xl bg-sand aspect-square">
-                <img src={p.img} alt={p.name} loading="lazy" width={1024} height={1024} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <span className="absolute top-4 start-4 bg-background/90 backdrop-blur px-3 py-1 rounded-full text-xs text-espresso">{p.tag}</span>
-              </div>
-              <div className="mt-5 flex items-start justify-between gap-4">
-                <h3 className="font-display text-lg text-espresso">{p.name}</h3>
-                <div className="text-espresso whitespace-nowrap">
-                  <span className="font-medium">{p.price}</span>
-                  <span className="text-xs text-muted-foreground ms-1">{t("price_currency")}</span>
-                </div>
+                <img src={img} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
               </div>
             </Link>
           ))}
