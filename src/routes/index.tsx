@@ -1,5 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
+import { useCart } from "@/lib/cart";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFeaturedProducts } from "@/lib/products";
+import { formatToman } from "@/lib/format";
 import heroPets from "@/assets/hero-pets.jpg";
 import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
@@ -11,12 +15,15 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { t, lang } = useI18n();
+  const { add } = useCart();
+  const { data: featured = [] } = useQuery({ queryKey: ["featured"], queryFn: fetchFeaturedProducts });
 
-  const products = [
-    { img: productDog, name: lang === "fa" ? "غذای خشک سگ بالغ" : "Adult Dog Dry Food", price: "۸۹۰,۰۰۰", tag: lang === "fa" ? "سگ" : "Dog" },
-    { img: productCat, name: lang === "fa" ? "غذای خشک گربه" : "Premium Cat Dry Food", price: "۶۵۰,۰۰۰", tag: lang === "fa" ? "گربه" : "Cat" },
-    { img: productTreats, name: lang === "fa" ? "تشویقی مخصوص" : "Signature Treats", price: "۱۹۵,۰۰۰", tag: lang === "fa" ? "تشویقی" : "Treats" },
-  ];
+  function fallback(slug?: string | null) {
+    const s = (slug ?? "").toLowerCase();
+    if (s.includes("cat")) return productCat;
+    if (s.includes("treat")) return productTreats;
+    return productDog;
+  }
 
   const testimonials = lang === "fa"
     ? [
