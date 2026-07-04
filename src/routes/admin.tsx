@@ -131,11 +131,14 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
     description_fa: initial.description_fa ?? "",
     description_en: initial.description_en ?? "",
     price_toman: initial.price_toman ?? 0,
+    compare_at_price_toman: initial.compare_at_price_toman ?? 0,
     stock: initial.stock ?? 0,
     images: (initial.images ?? []).join("\n"),
     features: JSON.stringify(initial.features ?? {}, null, 2),
     is_active: initial.is_active ?? true,
     is_featured: initial.is_featured ?? false,
+    is_on_sale: initial.is_on_sale ?? false,
+    discount_percent: initial.discount_percent ?? 0,
   });
   const [busy, setBusy] = useState(false);
 
@@ -150,6 +153,9 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
       name_fa: f.name_fa, name_en: f.name_en, brand: f.brand || null,
       description_fa: f.description_fa || null, description_en: f.description_en || null,
       price_toman: Number(f.price_toman), stock: Number(f.stock),
+      compare_at_price_toman: Number(f.compare_at_price_toman) > 0 ? Number(f.compare_at_price_toman) : null,
+      is_on_sale: !!f.is_on_sale,
+      discount_percent: Number(f.discount_percent) > 0 ? Number(f.discount_percent) : null,
       images: f.images.split("\n").map((s) => s.trim()).filter(Boolean),
       features, is_active: f.is_active, is_featured: f.is_featured,
     };
@@ -178,14 +184,17 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
             <L label="Brand"><input value={f.brand} onChange={(e) => setF({ ...f, brand: e.target.value })} className="input-base" /></L>
             <L label="Price (Toman)"><input type="number" required value={f.price_toman} onChange={(e) => setF({ ...f, price_toman: Number(e.target.value) })} className="input-base" /></L>
             <L label="Stock"><input type="number" required value={f.stock} onChange={(e) => setF({ ...f, stock: Number(e.target.value) })} className="input-base" /></L>
+            <L label="Compare-at price (was, Toman)"><input type="number" value={f.compare_at_price_toman} onChange={(e) => setF({ ...f, compare_at_price_toman: Number(e.target.value) })} className="input-base" placeholder="0 = none" /></L>
+            <L label="Discount %"><input type="number" min={0} max={99} value={f.discount_percent} onChange={(e) => setF({ ...f, discount_percent: Number(e.target.value) })} className="input-base" placeholder="0 = auto from prices" /></L>
           </div>
           <L label="Description (FA)"><textarea rows={3} value={f.description_fa} onChange={(e) => setF({ ...f, description_fa: e.target.value })} className="input-base" /></L>
           <L label="Description (EN)"><textarea rows={3} value={f.description_en} onChange={(e) => setF({ ...f, description_en: e.target.value })} className="input-base" /></L>
           <L label="Image URLs (one per line)"><textarea rows={3} value={f.images} onChange={(e) => setF({ ...f, images: e.target.value })} className="input-base font-mono text-xs" placeholder="https://..." /></L>
           <L label='Features (JSON, e.g. {"weight":"3kg"})'><textarea rows={3} value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} className="input-base font-mono text-xs" /></L>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_featured} onChange={(e) => setF({ ...f, is_featured: e.target.checked })} /> Featured</label>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_on_sale} onChange={(e) => setF({ ...f, is_on_sale: e.target.checked })} /> On sale (offers)</label>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-ghost !py-2 !px-5 text-sm">Cancel</button>
