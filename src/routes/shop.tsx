@@ -91,9 +91,12 @@ function ProductCard({ p, onOpen, onAdd, lang, tAdd, tCurrency }: {
 }) {
   const img = p.images[0] ?? fallbackImage(p.category_slug ?? p.slug);
   const name = lang === "fa" ? p.name_fa : p.name_en;
+  const pct = p.discount_percent
+    ?? (p.compare_at_price_toman ? Math.round(100 - (p.price_toman / p.compare_at_price_toman) * 100) : null);
   return (
     <article className="group">
       <button onClick={onOpen} className="block w-full relative overflow-hidden rounded-3xl bg-sand aspect-square">
+        {p.is_on_sale && pct !== null && pct > 0 && <span className="sale-badge">−{pct}%</span>}
         <img src={img} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
       </button>
       <div className="mt-5">
@@ -103,6 +106,9 @@ function ProductCard({ p, onOpen, onAdd, lang, tAdd, tCurrency }: {
           <div className="text-espresso">
             <span className="font-medium">{formatToman(p.price_toman, lang)}</span>
             <span className="text-xs text-muted-foreground ms-1">{tCurrency}</span>
+            {p.is_on_sale && p.compare_at_price_toman && (
+              <span className="ms-2 text-xs text-muted-foreground line-through">{formatToman(p.compare_at_price_toman, lang)}</span>
+            )}
           </div>
           <button onClick={onAdd} className="text-sm font-medium text-espresso hover:text-clay transition">
             {tAdd} →
