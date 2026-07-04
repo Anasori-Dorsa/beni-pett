@@ -232,3 +232,65 @@
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--clay) 30%, transparent);
   }
 }
+
+/* -------- Pet paw & peeking animations -------- */
+@keyframes paw-trot {
+  0%   { transform: translate(0, 0) rotate(var(--paw-rot, 0deg)); opacity: 0; }
+  15%  { opacity: 0.55; }
+  85%  { opacity: 0.55; }
+  100% { transform: translate(var(--paw-tx, 220px), var(--paw-ty, -60px)) rotate(var(--paw-rot, 0deg)); opacity: 0; }
+}
+
+@keyframes paw-fade {
+  0%, 100% { opacity: 0.18; transform: scale(1) rotate(var(--paw-rot, 0deg)); }
+  50%      { opacity: 0.55; transform: scale(1.08) rotate(var(--paw-rot, 0deg)); }
+}
+
+@keyframes peek {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-6px) rotate(2deg); }
+}
+
+@keyframes tail-wag {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(10deg); }
+}
+
+.paw {
+  position: absolute;
+  color: var(--clay);
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: paw-fade 3.5s ease-in-out infinite;
+}
+
+.paw-trail {
+  animation: paw-trot 6s ease-in-out infinite;
+}
+
+.peek-pet {
+  position: absolute;
+  pointer-events: none;
+  animation: peek 4s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.peek-pet .tail {
+  transform-origin: 20% 80%;
+  animation: tail-wag 1.4s ease-in-out infinite;
+}
+
+.sale-badge {
+  position: absolute;
+  top: 0.75rem;
+  inset-inline-start: 0.75rem;
+  background: linear-gradient(135deg, oklch(0.62 0.19 25), oklch(0.55 0.22 20));
+  color: white;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  box-shadow: 0 6px 20px -8px oklch(0.55 0.22 20 / 60%);
+  z-index: 2;
+}
