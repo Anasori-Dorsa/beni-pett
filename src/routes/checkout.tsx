@@ -75,7 +75,25 @@ function CheckoutPage() {
     if (itemsErr) { setBusy(false); toast.error(itemsErr.message); return; }
 
     clear();
-    navigate({ to: "/order-success", search: { id: order.id } });
+    // Initiate Zibal payment
+    try {
+      const resp = await fetch("/api/public/zibal/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const json = (await resp.json()) as { ok: boolean; redirectUrl?: string; error?: string };
+      if (!json.ok || !json.redirectUrl) {
+        toast.error(json.error ?? "Payment gateway error");
+        setBusy(false);
+        return;
+      }
+      toast.message(t("payment_redirect"));
+      window.location.href = json.redirectUrl;
+    } catch (err) {
+      setBusy(false);
+      toast.error("Payment gateway unreachable");
+    }
   }
 
   return (
