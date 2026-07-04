@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as OrderSuccessRouteImport } from './routes/order-success'
+import { Route as OffersRouteImport } from './routes/offers'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicZibalInitRouteImport } from './routes/api.public.zibal.init'
+import { Route as ApiPublicZibalCallbackRouteImport } from './routes/api.public.zibal.callback'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -31,6 +34,11 @@ const ShopRoute = ShopRouteImport.update({
 const OrderSuccessRoute = OrderSuccessRouteImport.update({
   id: '/order-success',
   path: '/order-success',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OffersRoute = OffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -58,6 +66,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicZibalInitRoute = ApiPublicZibalInitRouteImport.update({
+  id: '/api/public/zibal/init',
+  path: '/api/public/zibal/init',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicZibalCallbackRoute = ApiPublicZibalCallbackRouteImport.update({
+  id: '/api/public/zibal/callback',
+  path: '/api/public/zibal/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -65,9 +83,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/offers': typeof OffersRoute
   '/order-success': typeof OrderSuccessRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/zibal/callback': typeof ApiPublicZibalCallbackRoute
+  '/api/public/zibal/init': typeof ApiPublicZibalInitRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -75,9 +96,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/offers': typeof OffersRoute
   '/order-success': typeof OrderSuccessRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/zibal/callback': typeof ApiPublicZibalCallbackRoute
+  '/api/public/zibal/init': typeof ApiPublicZibalInitRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +110,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/offers': typeof OffersRoute
   '/order-success': typeof OrderSuccessRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/zibal/callback': typeof ApiPublicZibalCallbackRoute
+  '/api/public/zibal/init': typeof ApiPublicZibalInitRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -98,9 +125,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkout'
     | '/contact'
+    | '/offers'
     | '/order-success'
     | '/shop'
     | '/sitemap.xml'
+    | '/api/public/zibal/callback'
+    | '/api/public/zibal/init'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -108,9 +138,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkout'
     | '/contact'
+    | '/offers'
     | '/order-success'
     | '/shop'
     | '/sitemap.xml'
+    | '/api/public/zibal/callback'
+    | '/api/public/zibal/init'
   id:
     | '__root__'
     | '/'
@@ -118,9 +151,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/checkout'
     | '/contact'
+    | '/offers'
     | '/order-success'
     | '/shop'
     | '/sitemap.xml'
+    | '/api/public/zibal/callback'
+    | '/api/public/zibal/init'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -129,9 +165,12 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
+  OffersRoute: typeof OffersRoute
   OrderSuccessRoute: typeof OrderSuccessRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicZibalCallbackRoute: typeof ApiPublicZibalCallbackRoute
+  ApiPublicZibalInitRoute: typeof ApiPublicZibalInitRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -155,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/order-success'
       fullPath: '/order-success'
       preLoaderRoute: typeof OrderSuccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offers': {
+      id: '/offers'
+      path: '/offers'
+      fullPath: '/offers'
+      preLoaderRoute: typeof OffersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -192,6 +238,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/zibal/init': {
+      id: '/api/public/zibal/init'
+      path: '/api/public/zibal/init'
+      fullPath: '/api/public/zibal/init'
+      preLoaderRoute: typeof ApiPublicZibalInitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/zibal/callback': {
+      id: '/api/public/zibal/callback'
+      path: '/api/public/zibal/callback'
+      fullPath: '/api/public/zibal/callback'
+      preLoaderRoute: typeof ApiPublicZibalCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -201,9 +261,12 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
+  OffersRoute: OffersRoute,
   OrderSuccessRoute: OrderSuccessRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicZibalCallbackRoute: ApiPublicZibalCallbackRoute,
+  ApiPublicZibalInitRoute: ApiPublicZibalInitRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

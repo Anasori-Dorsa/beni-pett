@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFeaturedProducts } from "@/lib/products";
+import { fetchFeaturedProducts, fetchOffers } from "@/lib/products";
 import { formatToman } from "@/lib/format";
 import heroPets from "@/assets/hero-pets.jpg";
 import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
 import productTreats from "@/assets/product-treats.jpg";
+import { PawScatter, PeekingDog, PeekingCat } from "@/components/pet-decorations";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -17,6 +18,7 @@ function Index() {
   const { t, lang } = useI18n();
   const { add } = useCart();
   const { data: featured = [] } = useQuery({ queryKey: ["featured"], queryFn: fetchFeaturedProducts });
+  const { data: offers = [] } = useQuery({ queryKey: ["offers", 4], queryFn: () => fetchOffers(4) });
 
   function fallback(slug?: string | null) {
     const s = (slug ?? "").toLowerCase();
@@ -40,22 +42,35 @@ function Index() {
   return (
     <main>
       {/* HERO */}
-      <section className="container-page pt-10 md:pt-16 pb-24">
+      <section className="container-page pt-10 md:pt-16 pb-24 relative overflow-hidden">
+        <PawScatter
+          paws={[
+            { top: "8%", left: "2%", rot: -25, size: 22, trail: true, tx: 220, ty: -40 },
+            { top: "40%", left: "-1%", rot: 10, size: 18 },
+            { bottom: "10%", left: "10%", rot: -15, size: 20, trail: true, tx: 160, ty: -80 },
+            { top: "18%", right: "3%", rot: 25, size: 24 },
+            { bottom: "20%", right: "1%", rot: -20, size: 20, trail: true, tx: -180, ty: -50 },
+          ]}
+        />
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           <div className="order-2 lg:order-1">
             <div className="inline-flex items-center gap-2 rounded-full border border-clay/40 bg-cream px-4 py-1.5 text-xs uppercase tracking-widest text-espresso/80">
               <span className="h-1.5 w-1.5 rounded-full bg-clay" />
               {t("hero_eyebrow")}
             </div>
-            <h1 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] mt-6 text-espresso whitespace-pre-line">
-              {t("hero_title")}
-            </h1>
+            <div className="relative mt-6">
+              <PeekingDog className="absolute -top-10 -start-4 -z-0 opacity-90" style={{ width: 90, height: 90 }} />
+              <PeekingCat className="absolute -top-8 end-6 -z-0 opacity-90" style={{ width: 80, height: 80 }} />
+              <h1 className="relative font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] text-espresso whitespace-pre-line">
+                {t("hero_title")}
+              </h1>
+            </div>
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-lg">
               {t("hero_sub")}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/shop" className="btn-primary">{t("cta_shop")}</Link>
-              <a href="#about" className="btn-ghost">{t("nav_about")}</a>
+              <Link to="/offers" className="btn-ghost">{t("nav_offers")}</Link>
             </div>
 
             <div className="mt-14 grid grid-cols-3 gap-6 max-w-md">
@@ -97,6 +112,58 @@ function Index() {
           </div>
         </div>
       </section>
+
+      {/* OFFERS STRIP */}
+      {offers.length > 0 && (
+        <section className="bg-cream/60 border-y border-clay/20 py-16 relative overflow-hidden">
+          <PawScatter
+            paws={[
+              { top: "10%", left: "6%", rot: -30, size: 22 },
+              { bottom: "12%", right: "8%", rot: 20, size: 24, trail: true, tx: -160, ty: -40 },
+            ]}
+          />
+          <div className="container-page relative">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <div className="text-xs uppercase tracking-widest text-clay">{t("offers_eye")}</div>
+                <h2 className="font-display text-4xl md:text-5xl mt-3 text-espresso">{t("offers_title")}</h2>
+                <p className="mt-2 text-muted-foreground">{t("offers_sub")}</p>
+              </div>
+              <Link to="/offers" className="btn-ghost text-sm">{t("view_offers")} →</Link>
+            </div>
+            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {offers.map((p) => {
+                const img = p.images?.[0] || fallback(p.slug);
+                const name = lang === "fa" ? p.name_fa : p.name_en;
+                const pct = p.discount_percent
+                  ?? (p.compare_at_price_toman ? Math.round(100 - (p.price_toman / p.compare_at_price_toman) * 100) : null);
+                return (
+                  <div key={p.id} className="group bg-background rounded-3xl overflow-hidden border border-border/60 hover:shadow-[var(--shadow-card)] transition-all">
+                    <Link to="/offers" className="relative block aspect-square bg-sand overflow-hidden">
+                      {pct !== null && pct > 0 && <span className="sale-badge">−{pct}%</span>}
+                      <img src={img} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    </Link>
+                    <div className="p-4">
+                      <h3 className="font-display text-base text-espresso line-clamp-2 min-h-[3rem]">{name}</h3>
+                      <div className="mt-2 flex items-baseline justify-between gap-2">
+                        <div className="text-espresso">
+                          <span className="font-medium">{formatToman(p.price_toman, lang)}</span>
+                          {p.compare_at_price_toman && (
+                            <span className="ms-2 text-xs text-muted-foreground line-through">{formatToman(p.compare_at_price_toman, lang)}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => add({ id: p.id, name, price_toman: p.price_toman, image: img })} className="mt-3 w-full btn-ghost !py-2 text-xs">
+                        {t("add_to_cart")}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ABOUT / FEATURES */}
       <section id="about" className="bg-sand/50 py-24">

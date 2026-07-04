@@ -17,6 +17,8 @@ export type Product = {
   features: Record<string, unknown>;
   is_active: boolean;
   is_featured: boolean;
+  is_on_sale: boolean;
+  discount_percent: number | null;
 };
 
 export type Category = {
@@ -50,6 +52,19 @@ export async function fetchFeaturedProducts(): Promise<Product[]> {
     .eq("is_active", true)
     .eq("is_featured", true)
     .limit(3);
+  if (error) throw error;
+  return (data ?? []).map((p: any) => ({ ...p, category_slug: p.categories?.slug ?? null }));
+}
+
+export async function fetchOffers(limit?: number): Promise<Product[]> {
+  let query = supabase
+    .from("products")
+    .select("*, categories(slug)")
+    .eq("is_active", true)
+    .eq("is_on_sale", true)
+    .order("created_at", { ascending: false });
+  if (limit) query = query.limit(limit);
+  const { data, error } = await query;
   if (error) throw error;
   return (data ?? []).map((p: any) => ({ ...p, category_slug: p.categories?.slug ?? null }));
 }
