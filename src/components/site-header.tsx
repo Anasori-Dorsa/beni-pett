@@ -24,6 +24,7 @@ export function SiteHeader() {
         <nav className="hidden md:flex items-center gap-8 text-sm">
           <Link to="/" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_home")}</Link>
           <Link to="/shop" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_shop")}</Link>
+          <Link to="/offers" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_offers")}</Link>
           <a href="#about" className="text-foreground/80 hover:text-foreground transition">{t("nav_about")}</a>
           <Link to="/contact" className="text-foreground/80 hover:text-foreground transition" activeProps={{ className: "text-foreground font-medium" }}>{t("nav_contact")}</Link>
           {isAdmin && (
