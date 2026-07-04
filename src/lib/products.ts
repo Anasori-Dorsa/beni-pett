@@ -17,6 +17,8 @@ export type Product = {
   features: Record<string, unknown>;
   is_active: boolean;
   is_featured: boolean;
+  is_on_sale: boolean;
+  discount_percent: number | null;
 };
 
 export type Category = {
