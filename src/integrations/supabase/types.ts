@@ -137,6 +137,9 @@ export type Database = {
           id: string
           notes: string | null
           paid_at: string | null
+          payment_provider: string | null
+          payment_ref_number: string | null
+          payment_track_id: string | null
           phone: string
           postal_code: string | null
           shipping_toman: number
@@ -159,6 +162,9 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_provider?: string | null
+          payment_ref_number?: string | null
+          payment_track_id?: string | null
           phone: string
           postal_code?: string | null
           shipping_toman?: number
@@ -181,6 +187,9 @@ export type Database = {
           id?: string
           notes?: string | null
           paid_at?: string | null
+          payment_provider?: string | null
+          payment_ref_number?: string | null
+          payment_track_id?: string | null
           phone?: string
           postal_code?: string | null
           shipping_toman?: number
@@ -202,11 +211,13 @@ export type Database = {
           created_at: string
           description_en: string | null
           description_fa: string | null
+          discount_percent: number | null
           features: Json
           id: string
           images: string[]
           is_active: boolean
           is_featured: boolean
+          is_on_sale: boolean
           name_en: string
           name_fa: string
           price_toman: number
@@ -221,11 +232,13 @@ export type Database = {
           created_at?: string
           description_en?: string | null
           description_fa?: string | null
+          discount_percent?: number | null
           features?: Json
           id?: string
           images?: string[]
           is_active?: boolean
           is_featured?: boolean
+          is_on_sale?: boolean
           name_en: string
           name_fa: string
           price_toman: number
@@ -240,11 +253,13 @@ export type Database = {
           created_at?: string
           description_en?: string | null
           description_fa?: string | null
+          discount_percent?: number | null
           features?: Json
           id?: string
           images?: string[]
           is_active?: boolean
           is_featured?: boolean
+          is_on_sale?: boolean
           name_en?: string
           name_fa?: string
           price_toman?: number
