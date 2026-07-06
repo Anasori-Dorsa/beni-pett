@@ -8,7 +8,7 @@ import heroPets from "@/assets/hero-pets.jpg";
 import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
 import productTreats from "@/assets/product-treats.jpg";
-import { PawScatter, PeekingDog, PeekingCat } from "@/components/pet-decorations";
+import { PawScatter } from "@/components/pet-decorations";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -59,8 +59,6 @@ function Index() {
               {t("hero_eyebrow")}
             </div>
             <div className="relative mt-6">
-              <PeekingDog className="absolute -top-10 -start-4 -z-0 opacity-90" style={{ width: 90, height: 90 }} />
-              <PeekingCat className="absolute -top-8 end-6 -z-0 opacity-90" style={{ width: 80, height: 80 }} />
               <h1 className="relative font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] text-espresso whitespace-pre-line">
                 {t("hero_title")}
               </h1>
