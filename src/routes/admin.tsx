@@ -103,7 +103,8 @@ function ProductsAdmin() {
   }
 
   async function quickToggle(p: Product, field: "is_active" | "is_featured" | "is_on_sale") {
-    const { error } = await supabase.from("products").update({ [field]: !p[field] }).eq("id", p.id);
+    const patch: Partial<Product> = { [field]: !p[field] } as Partial<Product>;
+    const { error } = await supabase.from("products").update(patch as any).eq("id", p.id);
     if (error) toast.error(error.message);
     else { qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["offers"] }); }
   }
