@@ -8,8 +8,23 @@ import { useI18n } from "@/lib/i18n";
 import { formatToman } from "@/lib/format";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, Trash2, Plus, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, Plus, RefreshCw, Copy, Upload, X, ArrowUp, ArrowDown, Search } from "lucide-react";
 import type { Product, Category } from "@/lib/products";
+
+const BUCKET = "product-images";
+const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 10; // 10 years
+
+async function uploadProductImage(file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    contentType: file.type, upsert: false,
+  });
+  if (error) throw error;
+  const { data, error: sErr } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
+  if (sErr || !data) throw sErr ?? new Error("Failed to sign URL");
+  return data.signedUrl;
+}
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Beni Pett" }] }),
@@ -61,6 +76,9 @@ function ProductsAdmin() {
   const qc = useQueryClient();
   const { lang, t } = useI18n();
   const [editing, setEditing] = useState<Partial<Product> | null>(null);
+  const [q, setQ] = useState("");
+  const [catFilter, setCatFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "sale" | "featured">("all");
 
   const { data: products = [], refetch } = useQuery({
     queryKey: ["admin-products"],
@@ -84,39 +102,123 @@ function ProductsAdmin() {
     else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); }
   }
 
+  async function quickToggle(p: Product, field: "is_active" | "is_featured" | "is_on_sale") {
+    const { error } = await supabase.from("products").update({ [field]: !p[field] }).eq("id", p.id);
+    if (error) toast.error(error.message);
+    else { qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["offers"] }); }
+  }
+
+  async function duplicate(p: Product) {
+    const { id, ...rest } = p as any;
+    delete rest.created_at; delete rest.updated_at; delete (rest as any).categories;
+    rest.slug = `${p.slug}-copy-${Date.now().toString(36).slice(-4)}`;
+    rest.name_fa = `${p.name_fa} (کپی)`;
+    rest.name_en = `${p.name_en} (copy)`;
+    const { error } = await supabase.from("products").insert(rest);
+    if (error) toast.error(error.message);
+    else { toast.success("Duplicated"); qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); }
+  }
+
+  const filtered = products.filter((p) => {
+    if (catFilter !== "all" && p.category_id !== catFilter) return false;
+    if (statusFilter === "active" && !p.is_active) return false;
+    if (statusFilter === "inactive" && p.is_active) return false;
+    if (statusFilter === "sale" && !p.is_on_sale) return false;
+    if (statusFilter === "featured" && !p.is_featured) return false;
+    if (q) {
+      const s = q.toLowerCase();
+      if (![p.name_fa, p.name_en, p.brand ?? "", p.slug].some((v) => v.toLowerCase().includes(s))) return false;
+    }
+    return true;
+  });
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-muted-foreground">{products.length} products</div>
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+        <div className="flex flex-wrap gap-2 items-center flex-1">
+          <div className="relative">
+            <Search className="h-4 w-4 absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="input-base !py-2 ps-9 text-sm w-56" />
+          </div>
+          <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className="input-base !py-2 text-sm">
+            <option value="all">All categories</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)} className="input-base !py-2 text-sm">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="sale">On sale</option>
+            <option value="featured">Featured</option>
+          </select>
+          <div className="text-xs text-muted-foreground ms-1">{filtered.length}/{products.length}</div>
+        </div>
         <div className="flex gap-2">
           <button onClick={() => refetch()} className="btn-ghost text-sm !py-2 !px-4"><RefreshCw className="h-4 w-4" /></button>
           <button onClick={() => setEditing({})} className="btn-primary text-sm !py-2 !px-4"><Plus className="h-4 w-4" /> {t("add_new")}</button>
         </div>
       </div>
-      <div className="border border-border/60 rounded-2xl overflow-hidden bg-background">
+      <div className="border border-border/60 rounded-2xl overflow-x-auto bg-background">
         <table className="w-full text-sm">
           <thead className="bg-sand/60 text-espresso">
-            <tr><th className="text-start p-3">Name</th><th className="text-start p-3">Brand</th><th className="text-start p-3">Price</th><th className="text-start p-3">Stock</th><th className="text-start p-3">Active</th><th></th></tr>
+            <tr>
+              <th className="text-start p-3 w-16">Image</th>
+              <th className="text-start p-3">Name</th>
+              <th className="text-start p-3">Brand</th>
+              <th className="text-start p-3">Price</th>
+              <th className="text-start p-3">Stock</th>
+              <th className="text-start p-3">Flags</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {filtered.map((p) => (
               <tr key={p.id} className="border-t border-border/60">
+                <td className="p-3">
+                  {p.images?.[0] ? (
+                    <img src={p.images[0]} alt="" className="w-12 h-12 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-lg bg-sand" />
+                  )}
+                </td>
                 <td className="p-3">{lang === "fa" ? p.name_fa : p.name_en}</td>
                 <td className="p-3 text-muted-foreground">{p.brand ?? "—"}</td>
                 <td className="p-3">{formatToman(p.price_toman, lang)}</td>
-                <td className="p-3">{p.stock}</td>
-                <td className="p-3">{p.is_active ? "✓" : "—"}</td>
+                <td className="p-3">
+                  <span className={p.stock <= 0 ? "text-red-600" : p.stock < 5 ? "text-amber-600" : ""}>{p.stock}</span>
+                </td>
+                <td className="p-3">
+                  <div className="flex gap-1">
+                    <FlagChip label="A" title="Active" on={p.is_active} onClick={() => quickToggle(p, "is_active")} />
+                    <FlagChip label="★" title="Featured" on={p.is_featured} onClick={() => quickToggle(p, "is_featured")} />
+                    <FlagChip label="%" title="On sale" on={p.is_on_sale} onClick={() => quickToggle(p, "is_on_sale")} />
+                  </div>
+                </td>
                 <td className="p-3 text-end">
                   <button onClick={() => setEditing(p)} className="p-2 hover:bg-sand rounded"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => duplicate(p)} className="p-2 hover:bg-sand rounded" title="Duplicate"><Copy className="h-4 w-4" /></button>
                   <button onClick={() => remove(p.id)} className="p-2 hover:bg-red-50 text-red-600 rounded"><Trash2 className="h-4 w-4" /></button>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No products match.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
       {editing && <ProductForm initial={editing} categories={categories} onClose={() => setEditing(null)} onSaved={() => { qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); setEditing(null); }} />}
     </div>
+  );
+}
+
+function FlagChip({ label, title, on, onClick }: { label: string; title: string; on: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`w-7 h-7 rounded-full text-xs font-medium transition ${on ? "bg-espresso text-cream" : "bg-sand/60 text-muted-foreground hover:bg-sand"}`}
+    >{label}</button>
   );
 }
 
@@ -133,14 +235,46 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
     price_toman: initial.price_toman ?? 0,
     compare_at_price_toman: initial.compare_at_price_toman ?? 0,
     stock: initial.stock ?? 0,
-    images: (initial.images ?? []).join("\n"),
     features: JSON.stringify(initial.features ?? {}, null, 2),
     is_active: initial.is_active ?? true,
     is_featured: initial.is_featured ?? false,
     is_on_sale: initial.is_on_sale ?? false,
     discount_percent: initial.discount_percent ?? 0,
   });
+  const [images, setImages] = useState<string[]>(initial.images ?? []);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  async function handleFiles(files: FileList | File[]) {
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (arr.length === 0) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(arr.map((file) => uploadProductImage(file)));
+      setImages((prev) => [...prev, ...urls]);
+      toast.success(`${urls.length} image(s) uploaded`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function removeImage(i: number) { setImages((arr) => arr.filter((_, idx) => idx !== i)); }
+  function moveImage(i: number, dir: -1 | 1) {
+    setImages((arr) => {
+      const j = i + dir;
+      if (j < 0 || j >= arr.length) return arr;
+      const copy = [...arr]; [copy[i], copy[j]] = [copy[j], copy[i]]; return copy;
+    });
+  }
+
+  function autoSlug() {
+    const base = (f.name_en || f.name_fa).toLowerCase().trim()
+      .replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").replace(/(^-|-$)/g, "");
+    setF({ ...f, slug: base });
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -156,7 +290,7 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
       compare_at_price_toman: Number(f.compare_at_price_toman) > 0 ? Number(f.compare_at_price_toman) : null,
       is_on_sale: !!f.is_on_sale,
       discount_percent: Number(f.discount_percent) > 0 ? Number(f.discount_percent) : null,
-      images: f.images.split("\n").map((s) => s.trim()).filter(Boolean),
+      images,
       features, is_active: f.is_active, is_featured: f.is_featured,
     };
     const { error } = f.id
@@ -173,7 +307,12 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
         <DialogHeader><DialogTitle>{f.id ? "Edit product" : "New product"}</DialogTitle></DialogHeader>
         <form onSubmit={save} className="grid gap-4">
           <div className="grid md:grid-cols-2 gap-4">
-            <L label="Slug"><input required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} className="input-base" /></L>
+            <L label="Slug">
+              <div className="flex gap-2">
+                <input required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} className="input-base flex-1" />
+                <button type="button" onClick={autoSlug} className="btn-ghost !py-2 !px-3 text-xs">Auto</button>
+              </div>
+            </L>
             <L label="Category">
               <select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })} className="input-base">
                 {categories.map((c) => <option key={c.id} value={c.id}>{c.name_en}</option>)}
@@ -189,7 +328,39 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
           </div>
           <L label="Description (FA)"><textarea rows={3} value={f.description_fa} onChange={(e) => setF({ ...f, description_fa: e.target.value })} className="input-base" /></L>
           <L label="Description (EN)"><textarea rows={3} value={f.description_en} onChange={(e) => setF({ ...f, description_en: e.target.value })} className="input-base" /></L>
-          <L label="Image URLs (one per line)"><textarea rows={3} value={f.images} onChange={(e) => setF({ ...f, images: e.target.value })} className="input-base font-mono text-xs" placeholder="https://..." /></L>
+          <L label="Images">
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files) handleFiles(e.dataTransfer.files); }}
+              className={`border-2 border-dashed rounded-xl p-4 transition ${dragOver ? "border-espresso bg-sand/50" : "border-border/60"}`}
+            >
+              {images.length > 0 && (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+                  {images.map((url, i) => (
+                    <div key={url + i} className="relative group rounded-lg overflow-hidden bg-sand aspect-square">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      {i === 0 && <span className="absolute top-1 start-1 text-[10px] px-1.5 py-0.5 rounded bg-espresso text-cream">Cover</span>}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                        <button type="button" onClick={() => moveImage(i, -1)} className="p-1.5 bg-white rounded-full disabled:opacity-30" disabled={i === 0}><ArrowUp className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => moveImage(i, 1)} className="p-1.5 bg-white rounded-full disabled:opacity-30" disabled={i === images.length - 1}><ArrowDown className="h-3 w-3" /></button>
+                        <button type="button" onClick={() => removeImage(i)} className="p-1.5 bg-red-600 text-white rounded-full"><X className="h-3 w-3" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <label className="flex flex-col items-center justify-center gap-2 py-6 cursor-pointer text-muted-foreground hover:text-espresso transition">
+                <Upload className="h-6 w-6" />
+                <span className="text-sm">{uploading ? "Uploading…" : "Drop images or click to upload"}</span>
+                <span className="text-xs">JPG · PNG · WebP · AVIF (max 5MB)</span>
+                <input
+                  type="file" accept="image/*" multiple className="hidden"
+                  onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ""; }}
+                />
+              </label>
+            </div>
+          </L>
           <L label='Features (JSON, e.g. {"weight":"3kg"})'><textarea rows={3} value={f.features} onChange={(e) => setF({ ...f, features: e.target.value })} className="input-base font-mono text-xs" /></L>
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.is_active} onChange={(e) => setF({ ...f, is_active: e.target.checked })} /> Active</label>
@@ -198,7 +369,7 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-ghost !py-2 !px-5 text-sm">Cancel</button>
-            <button disabled={busy} className="btn-primary !py-2 !px-5 text-sm">{busy ? "…" : "Save"}</button>
+            <button disabled={busy || uploading} className="btn-primary !py-2 !px-5 text-sm">{busy ? "…" : "Save"}</button>
           </div>
         </form>
       </DialogContent>
