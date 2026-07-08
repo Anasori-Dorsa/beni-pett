@@ -7,6 +7,7 @@ import type { Product } from "@/lib/products";
 import fallbackDog from "@/assets/product-dog.jpg";
 import fallbackCat from "@/assets/product-cat.jpg";
 import fallbackTreats from "@/assets/product-treats.jpg";
+import { ReviewsSection } from "@/components/reviews-section";
 
 function fallbackImage(slug?: string) {
   if (!slug) return fallbackDog;
@@ -28,7 +29,7 @@ export function ProductModal({ product, onClose }: { product: Product | null; on
 
   return (
     <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background">
+      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background max-h-[90vh] overflow-y-auto">
         <DialogTitle className="sr-only">{name}</DialogTitle>
         <div className="grid md:grid-cols-2">
           <div className="bg-sand">
@@ -79,6 +80,9 @@ export function ProductModal({ product, onClose }: { product: Product | null; on
               >{t("add_to_cart")}</button>
             </div>
           </div>
+        </div>
+        <div className="border-t border-border/60 p-6 bg-cream/30">
+          <ReviewsSection productId={product.id} compact />
         </div>
       </DialogContent>
     </Dialog>
