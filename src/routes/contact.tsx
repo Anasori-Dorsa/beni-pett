@@ -90,6 +90,18 @@ function ContactPage() {
             <Field label={t("contact_message")} required>
               <textarea rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} className="input-base resize-y" />
             </Field>
+
+            {/* honeypot field — hidden from real users via CSS, bots often fill every input */}
+            <input
+              type="text"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+              className="absolute opacity-0 pointer-events-none h-0 w-0"
+              aria-hidden="true"
+            />
+
             <button disabled={loading} className="btn-primary justify-center sm:w-fit">{loading ? "…" : t("contact_send")}</button>
           </form>
         </div>
