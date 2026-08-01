@@ -29,6 +29,8 @@ function ContactPage() {
   const { t, lang } = useI18n();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
+  const [website, setWebsite] = useState(""); // honeypot — humans never fill this
+  const [formOpenedAt] = useState(() => Date.now());
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
