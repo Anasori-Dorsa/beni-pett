@@ -10,6 +10,7 @@ import productCat from "@/assets/product-cat.jpg";
 import productTreats from "@/assets/product-treats.jpg";
 import { PawScatter } from "@/components/pet-decorations";
 import { supabase } from "@/integrations/supabase/client";
+
 export const Route = createFileRoute("/")({
   component: Index,
 });
@@ -241,14 +242,28 @@ function Index() {
             <div className="text-xs uppercase tracking-widest text-clay">{t("testi_eye")}</div>
             <h2 className="font-display text-4xl md:text-5xl mt-3">{t("testi_title")}</h2>
           </div>
-          <div className="mt-12 grid md:grid-cols-3 gap-6">
-            {testimonials.map((tst, i) => (
-              <div key={i} className="rounded-3xl border border-cream/10 bg-cream/5 p-8">
-                <div className="text-clay text-lg">★★★★★</div>
-                <p className="mt-4 text-cream/90 leading-relaxed">"{tst.text}"</p>
-                <div className="mt-6 text-sm text-cream/70">— {tst.name}</div>
-              </div>
-            ))}
+          {testimonials.length === 0 ? (
+            <p className="mt-12 text-cream/60 text-sm">
+              {lang === "fa" ? "هنوز نظری ثبت نشده." : "No reviews yet."}
+            </p>
+          ) : (
+            <div className="mt-12 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {testimonials.map((tst) => (
+                <div key={tst.id} className="rounded-3xl border border-cream/10 bg-cream/5 p-8">
+                  <div className="text-clay text-lg">
+                    {"★".repeat(tst.rating ?? 5)}
+                    {"☆".repeat(5 - (tst.rating ?? 5))}
+                  </div>
+                  <p className="mt-4 text-cream/90 leading-relaxed line-clamp-4">"{tst.content}"</p>
+                  <div className="mt-6 text-sm text-cream/70">— {tst.author_name}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-10 text-center">
+            <Link to="/reviews" className="btn-ghost !border-cream/30 !text-cream hover:!bg-cream/10">
+              {lang === "fa" ? "مشاهده‌ی همه‌ی نظرات" : "See all reviews"}
+            </Link>
           </div>
         </div>
       </section>
