@@ -27,17 +27,20 @@ function Index() {
     return productDog;
   }
 
-  const testimonials = lang === "fa"
-    ? [
-        { name: "نگار م.", text: "کیفیت غذاها واقعا فرق داره. گربه‌ام از وقتی از بنی‌پت می‌خرم شادتره." },
-        { name: "امیر ک.", text: "مشاوره‌ی تیمشون عالی بود. برای سگ آلرژی‌داری من دقیقا چیزی که لازم داشت پیدا کردن." },
-        { name: "سارا ح.", text: "بسته‌بندی تمیز، ارسال سریع، قیمت منصفانه. دیگه جای دیگه‌ای نمی‌خرم." },
-      ]
-    : [
-        { name: "Negar M.", text: "The quality really is different. My cat is visibly happier since I switched to Beni Pett." },
-        { name: "Amir K.", text: "Their advice was spot on — they found the exact food my allergic dog needed." },
-        { name: "Sara H.", text: "Clean packaging, fast delivery, fair prices. I don't shop anywhere else now." },
-      ];
+  const { data: testimonials = [] } = useQuery({
+    queryKey: ["home-testimonials"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("id, author_name, content, rating")
+        .is("product_id", null)
+        .is("parent_id", null)
+        .order("created_at", { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   return (
     <main>
