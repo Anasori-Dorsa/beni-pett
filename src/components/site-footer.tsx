@@ -21,6 +21,9 @@ export function SiteFooter() {
             <li><a href="/" className="hover:text-espresso">{t("nav_home")}</a></li>
             <li><a href="/shop" className="hover:text-espresso">{t("nav_shop")}</a></li>
             <li><a href="#about" className="hover:text-espresso">{t("nav_about")}</a></li>
+            <li><a href="/privacy" className="hover:text-espresso">{lang === "fa" ? "حریم خصوصی" : "Privacy"}</a></li>
+            <li><a href="/terms" className="hover:text-espresso">{lang === "fa" ? "قوانین و مقررات" : "Terms"}</a></li>
+            <li><a href="/refund-policy" className="hover:text-espresso">{lang === "fa" ? "بازگشت کالا" : "Returns"}</a></li>
           </ul>
         </div>
         <div>
@@ -30,7 +33,7 @@ export function SiteFooter() {
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>hello@benipett.com</li>
             <li dir="ltr">+98 21 000 0000</li>
-            <li>{lang === "fa" ? "تهران، ایران" : "Tehran, Iran"}</li>
+            <li>{lang === "fa" ? "مشهد، ایران" : "Mashhad, Iran"}</li>
           </ul>
         </div>
       </div>
