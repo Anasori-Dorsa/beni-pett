@@ -9,7 +9,7 @@ import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
 import productTreats from "@/assets/product-treats.jpg";
 import { PawScatter } from "@/components/pet-decorations";
-
+import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/")({
   component: Index,
 });
