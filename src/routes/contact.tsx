@@ -34,6 +34,16 @@ function ContactPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Honeypot: real users never see/fill this field. If it has any value, silently drop.
+    if (website.trim() !== "") return;
+
+    // Bots typically submit instantly; humans take at least a couple of seconds.
+    if (Date.now() - formOpenedAt < 2000) {
+      toast.error(lang === "fa" ? "لطفاً کمی صبر کنید و دوباره تلاش کنید." : "Please wait a moment and try again.");
+      return;
+    }
+
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0]?.message ?? "Invalid");
