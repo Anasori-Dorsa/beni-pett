@@ -1,23 +1,35 @@
+// src/lib/auth-hooks.ts
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import { apiFetch } from "@/lib/api-client";
+
+export type AppUser = {
+  id: string;
+  phone: string;
+  email?: string | null;
+  full_name?: string | null;
+  is_admin: boolean;
+};
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [session, setSession] = useState<null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
-    return () => sub.subscription.unsubscribe();
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await apiFetch<{ user: AppUser | null }>("/api/auth/me");
+        if (!cancelled) setUser(data.user);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return { user, session, loading };
@@ -25,24 +37,5 @@ export function useAuth() {
 
 export function useIsAdmin() {
   const { user, loading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    if (loading) return;
-    if (!user) { setIsAdmin(false); setChecking(false); return; }
-    let cancel = false;
-    (async () => {
-      const { data } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-      if (!cancel) { setIsAdmin(Boolean(data)); setChecking(false); }
-    })();
-    return () => { cancel = true; };
-  }, [user, loading]);
-
-  return { isAdmin, checking: loading || checking, user };
+  return { isAdmin: !!user?.is_admin, checking: loading, user };
 }
