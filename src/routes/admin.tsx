@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 import { useIsAdmin } from "@/lib/auth-hooks";
 import { useI18n } from "@/lib/i18n";
 import { formatToman } from "@/lib/format";
@@ -11,19 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Pencil, Trash2, Plus, RefreshCw, Copy, Upload, X, ArrowUp, ArrowDown, Search } from "lucide-react";
 import type { Product, Category } from "@/lib/products";
 
-const BUCKET = "product-images";
-const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 10; // 10 years
-
 async function uploadProductImage(file: File): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type, upsert: false,
+  const formData = new FormData();
+  formData.append("file", file);
+  const result = await apiFetch<{ url: string }>("/api/admin/upload", {
+    method: "POST",
+    body: formData,
   });
-  if (error) throw error;
-  const { data, error: sErr } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGNED_URL_TTL);
-  if (sErr || !data) throw sErr ?? new Error("Failed to sign URL");
-  return data.signedUrl;
+  return result.url;
 }
 
 export const Route = createFileRoute("/admin")({
@@ -82,31 +77,35 @@ function ProductsAdmin() {
 
   const { data: products = [], refetch } = useQuery({
     queryKey: ["admin-products"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
-      if (error) throw error; return data as Product[];
-    },
+    queryFn: () => apiFetch<Product[]>("/api/admin/products"),
   });
   const { data: categories = [] } = useQuery({
     queryKey: ["admin-categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").order("sort_order");
-      if (error) throw error; return data as Category[];
-    },
+    queryFn: () => apiFetch<Category[]>("/api/admin/categories"),
   });
 
   async function remove(id: string) {
     if (!confirm("Delete this product?")) return;
-    const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message);
-    else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); }
+    try {
+      await apiFetch(`/api/admin/products/${id}`, { method: "DELETE" });
+      toast.success("Deleted");
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
 
   async function quickToggle(p: Product, field: "is_active" | "is_featured" | "is_on_sale") {
     const patch: Partial<Product> = { [field]: !p[field] } as Partial<Product>;
-    const { error } = await supabase.from("products").update(patch as any).eq("id", p.id);
-    if (error) toast.error(error.message);
-    else { qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); qc.invalidateQueries({ queryKey: ["offers"] }); }
+    try {
+      await apiFetch(`/api/admin/products/${p.id}`, { method: "PUT", body: patch });
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["offers"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
 
   async function duplicate(p: Product) {
@@ -115,9 +114,14 @@ function ProductsAdmin() {
     rest.slug = `${p.slug}-copy-${Date.now().toString(36).slice(-4)}`;
     rest.name_fa = `${p.name_fa} (کپی)`;
     rest.name_en = `${p.name_en} (copy)`;
-    const { error } = await supabase.from("products").insert(rest);
-    if (error) toast.error(error.message);
-    else { toast.success("Duplicated"); qc.invalidateQueries({ queryKey: ["admin-products"] }); qc.invalidateQueries({ queryKey: ["products"] }); }
+    try {
+      await apiFetch("/api/admin/products", { method: "POST", body: rest });
+      toast.success("Duplicated");
+      qc.invalidateQueries({ queryKey: ["admin-products"] });
+      qc.invalidateQueries({ queryKey: ["products"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
 
   const filtered = products.filter((p) => {
@@ -294,12 +298,19 @@ function ProductForm({ initial, categories, onClose, onSaved }: { initial: Parti
       images,
       features, is_active: f.is_active, is_featured: f.is_featured,
     };
-    const { error } = f.id
-      ? await supabase.from("products").update(payload).eq("id", f.id)
-      : await supabase.from("products").insert(payload);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Saved"); onSaved();
+    try {
+      if (f.id) {
+        await apiFetch(`/api/admin/products/${f.id}`, { method: "PUT", body: payload });
+      } else {
+        await apiFetch("/api/admin/products", { method: "POST", body: payload });
+      }
+      toast.success("Saved");
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -388,15 +399,18 @@ function CategoriesAdmin() {
   const [editing, setEditing] = useState<Partial<Category> | null>(null);
   const { data: cats = [] } = useQuery({
     queryKey: ["admin-categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").order("sort_order");
-      if (error) throw error; return data as Category[];
-    },
+    queryFn: () => apiFetch<Category[]>("/api/admin/categories"),
   });
   async function remove(id: string) {
     if (!confirm("Delete category? Products will be unlinked.")) return;
-    const { error } = await supabase.from("categories").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-categories"] }); qc.invalidateQueries({ queryKey: ["categories"] }); }
+    try {
+      await apiFetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+      toast.success("Deleted");
+      qc.invalidateQueries({ queryKey: ["admin-categories"] });
+      qc.invalidateQueries({ queryKey: ["categories"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
   return (
     <div>
@@ -431,10 +445,19 @@ function CategoryForm({ initial, onClose, onSaved }: { initial: Partial<Category
   async function save(e: React.FormEvent) {
     e.preventDefault(); setBusy(true);
     const payload = { slug: f.slug, name_fa: f.name_fa, name_en: f.name_en, sort_order: Number(f.sort_order) };
-    const { error } = f.id ? await supabase.from("categories").update(payload).eq("id", f.id) : await supabase.from("categories").insert(payload);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Saved"); onSaved();
+    try {
+      if (f.id) {
+        await apiFetch(`/api/admin/categories/${f.id}`, { method: "PUT", body: payload });
+      } else {
+        await apiFetch("/api/admin/categories", { method: "POST", body: payload });
+      }
+      toast.success("Saved");
+      onSaved();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -457,14 +480,16 @@ function OrdersAdmin() {
   const { lang } = useI18n();
   const { data: orders = [] } = useQuery({
     queryKey: ["admin-orders"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("*, order_items(*)").order("created_at", { ascending: false });
-      if (error) throw error; return data as any[];
-    },
+    queryFn: () => apiFetch<any[]>("/api/admin/orders"),
   });
   async function setStatus(id: string, status: string) {
-    const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin-orders"] }); }
+    try {
+      await apiFetch(`/api/admin/orders/${id}`, { method: "PUT", body: { status } });
+      toast.success("Updated");
+      qc.invalidateQueries({ queryKey: ["admin-orders"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
   return (
     <div className="grid gap-4">
@@ -503,19 +528,24 @@ function MessagesAdmin() {
   const qc = useQueryClient();
   const { data: msgs = [] } = useQuery({
     queryKey: ["admin-messages"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("contact_messages").select("*").order("created_at", { ascending: false });
-      if (error) throw error; return data as any[];
-    },
+    queryFn: () => apiFetch<any[]>("/api/admin/messages"),
   });
   async function toggleRead(id: string, is_read: boolean) {
-    await supabase.from("contact_messages").update({ is_read: !is_read }).eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-messages"] });
+    try {
+      await apiFetch(`/api/admin/messages/${id}`, { method: "PUT", body: { is_read: !is_read } });
+      qc.invalidateQueries({ queryKey: ["admin-messages"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
   async function remove(id: string) {
     if (!confirm("Delete message?")) return;
-    await supabase.from("contact_messages").delete().eq("id", id);
-    qc.invalidateQueries({ queryKey: ["admin-messages"] });
+    try {
+      await apiFetch(`/api/admin/messages/${id}`, { method: "DELETE" });
+      qc.invalidateQueries({ queryKey: ["admin-messages"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
   return (
     <div className="grid gap-3">
