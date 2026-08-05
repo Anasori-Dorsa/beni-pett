@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-hooks";
 import { formatToman } from "@/lib/format";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 import { z } from "zod";
 
 export const Route = createFileRoute("/checkout")({
@@ -47,32 +47,27 @@ function CheckoutPage() {
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Invalid"); return; }
     setBusy(true);
-    const { data: order, error } = await supabase.from("orders").insert({
-      user_id: user.id,
-      full_name: parsed.data.full_name,
-      phone: parsed.data.phone,
-      address: parsed.data.address,
-      city: parsed.data.city,
-      postal_code: parsed.data.postal_code || null,
-      notes: parsed.data.notes || null,
-      subtotal_toman: subtotal,
-      shipping_toman: shipping,
-      total_toman: total,
-      currency: "irr",
-      status: "pending",
-    }).select().single();
-    if (error || !order) { setBusy(false); toast.error(error?.message ?? "Failed"); return; }
 
-    const rows = items.map((it) => ({
-      order_id: order.id,
-      product_id: it.id,
-      product_name: it.name,
-      unit_price_toman: it.price_toman,
-      quantity: it.quantity,
-      image_url: it.image ?? null,
-    }));
-    const { error: itemsErr } = await supabase.from("order_items").insert(rows);
-    if (itemsErr) { setBusy(false); toast.error(itemsErr.message); return; }
+    let orderId: string;
+    try {
+      const result = await apiFetch<{ orderId: string }>("/api/orders", {
+        method: "POST",
+        body: {
+          full_name: parsed.data.full_name,
+          phone: parsed.data.phone,
+          address: parsed.data.address,
+          city: parsed.data.city,
+          postal_code: parsed.data.postal_code || null,
+          notes: parsed.data.notes || null,
+          items: items.map((it) => ({ product_id: it.id, quantity: it.quantity })),
+        },
+      });
+      orderId = result.orderId;
+    } catch (err) {
+      setBusy(false);
+      toast.error(err instanceof Error ? err.message : "Failed");
+      return;
+    }
 
     clear();
     // Initiate Zibal payment
@@ -80,7 +75,7 @@ function CheckoutPage() {
       const resp = await fetch("/api/public/zibal/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id }),
+        body: JSON.stringify({ orderId }),
       });
       const json = (await resp.json()) as { ok: boolean; redirectUrl?: string; error?: string };
       if (!json.ok || !json.redirectUrl) {
