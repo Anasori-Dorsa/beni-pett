@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { useAuth, useIsAdmin } from "@/lib/auth-hooks";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 import { ShoppingBag, User as UserIcon } from "lucide-react";
 
 export function SiteHeader() {
@@ -10,6 +10,15 @@ export function SiteHeader() {
   const { count, open } = useCart();
   const { user } = useAuth();
   const { isAdmin } = useIsAdmin();
+
+  async function handleLogout() {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/";
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-background/70 border-b border-border/50">
       <div className="container-page flex items-center justify-between h-20">
@@ -58,7 +67,7 @@ export function SiteHeader() {
           </button>
           {user ? (
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={handleLogout}
               className="text-sm text-foreground/70 hover:text-foreground hidden sm:inline"
             >{t("nav_logout")}</button>
           ) : (
