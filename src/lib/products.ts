@@ -1,4 +1,5 @@
-import { supabase } from "@/integrations/supabase/client";
+// src/lib/products.ts
+import { apiFetch } from "@/lib/api-client";
 
 export type Product = {
   id: string;
@@ -30,41 +31,18 @@ export type Category = {
 };
 
 export async function fetchCategories(): Promise<Category[]> {
-  const { data, error } = await supabase.from("categories").select("*").order("sort_order");
-  if (error) throw error;
-  return (data ?? []) as Category[];
+  return apiFetch<Category[]>("/api/categories");
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*, categories(slug)")
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((p: any) => ({ ...p, category_slug: p.categories?.slug ?? null }));
+  return apiFetch<Product[]>("/api/products");
 }
 
 export async function fetchFeaturedProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*, categories(slug)")
-    .eq("is_active", true)
-    .eq("is_featured", true)
-    .limit(3);
-  if (error) throw error;
-  return (data ?? []).map((p: any) => ({ ...p, category_slug: p.categories?.slug ?? null }));
+  return apiFetch<Product[]>("/api/products/featured");
 }
 
 export async function fetchOffers(limit?: number): Promise<Product[]> {
-  let query = supabase
-    .from("products")
-    .select("*, categories(slug)")
-    .eq("is_active", true)
-    .eq("is_on_sale", true)
-    .order("created_at", { ascending: false });
-  if (limit) query = query.limit(limit);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data ?? []).map((p: any) => ({ ...p, category_slug: p.categories?.slug ?? null }));
+  const qs = limit ? `?limit=${limit}` : "";
+  return apiFetch<Product[]>(`/api/products/offers${qs}`);
 }
