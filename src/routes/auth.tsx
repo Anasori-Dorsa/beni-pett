@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth-hooks";
 
 export const Route = createFileRoute("/auth")({
@@ -47,23 +46,12 @@ function AuthPage() {
     } finally { setBusy(false); }
   }
 
-  async function google() {
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) toast.error(result.error.message ?? "Google sign-in failed");
-  }
-
   return (
     <main className="container-page pt-16 pb-24">
       <div className="max-w-md mx-auto bg-background rounded-3xl border border-border/60 p-8 shadow-[var(--shadow-soft)]">
         <h1 className="font-display text-3xl text-espresso">{mode === "login" ? t("auth_login_title") : t("auth_signup_title")}</h1>
 
-        <button onClick={google} type="button" className="mt-6 w-full border border-border rounded-lg py-2.5 text-sm hover:bg-sand transition">
-          {t("auth_google")}
-        </button>
-
-        <div className="my-6 border-t border-border/60" />
-
-        <form onSubmit={submit} className="grid gap-4">
+        <form onSubmit={submit} className="mt-8 grid gap-4">
           {mode === "signup" && (
             <>
               <label className="block">
