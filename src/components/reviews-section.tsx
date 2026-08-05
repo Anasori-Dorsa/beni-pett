@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Star, Trash2, MessageSquare } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 import { useAuth, useIsAdmin } from "@/lib/auth-hooks";
 import { useI18n } from "@/lib/i18n";
 
@@ -20,7 +20,7 @@ export type Review = {
 };
 
 type Props = {
-  productId?: string | null; // null → site-wide reviews
+  productId?: string | null; // null → نظرات سراسری
   title?: string;
   compact?: boolean;
 };
@@ -82,11 +82,8 @@ export function ReviewsSection({ productId = null, title, compact }: Props) {
   const { data: reviews = [], isLoading } = useQuery({
     queryKey: ["reviews", scopeKey],
     queryFn: async (): Promise<Review[]> => {
-      let q = supabase.from("reviews").select("*").order("created_at", { ascending: false });
-      q = productId ? q.eq("product_id", productId) : q.is("product_id", null);
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []) as Review[];
+      const qs = productId ? `?productId=${encodeURIComponent(productId)}` : "";
+      return apiFetch<Review[]>(`/api/reviews${qs}`);
     },
   });
 
@@ -116,37 +113,35 @@ export function ReviewsSection({ productId = null, title, compact }: Props) {
     if (body.length < 1) { toast.error(lang === "fa" ? "متن پیام خالی است" : "Message is empty"); return; }
     if (body.length > 2000) { toast.error(lang === "fa" ? "حداکثر ۲۰۰۰ کاراکتر" : "Max 2000 chars"); return; }
     setSubmitting(true);
-    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
-    const author_name =
-      (typeof meta.full_name === "string" && meta.full_name) ||
-      (typeof meta.name === "string" && meta.name) ||
-      (user.email ? user.email.split("@")[0] : (lang === "fa" ? "کاربر" : "User"));
-    const author_avatar =
-      (typeof meta.avatar_url === "string" && meta.avatar_url) ||
-      (typeof meta.picture === "string" && meta.picture) || null;
-    const payload = {
-      user_id: user.id,
-      product_id: productId,
-      parent_id: parentId,
-      content: body,
-      rating: parentId ? null : (stars >= 1 && stars <= 5 ? stars : null),
-      author_name: String(author_name).slice(0, 80),
-      author_avatar,
-    };
-    const { error } = await supabase.from("reviews").insert(payload);
-    setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(lang === "fa" ? "ثبت شد" : "Posted");
-    if (parentId) { setReplyTo(null); setReplyText(""); }
-    else { setContent(""); setRating(0); }
-    qc.invalidateQueries({ queryKey: ["reviews", scopeKey] });
+    try {
+      await apiFetch("/api/reviews", {
+        method: "POST",
+        body: {
+          product_id: productId,
+          parent_id: parentId,
+          content: body,
+          rating: parentId ? null : (stars >= 1 && stars <= 5 ? stars : null),
+        },
+      });
+      toast.success(lang === "fa" ? "ثبت شد" : "Posted");
+      if (parentId) { setReplyTo(null); setReplyText(""); }
+      else { setContent(""); setRating(0); }
+      qc.invalidateQueries({ queryKey: ["reviews", scopeKey] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function remove(id: string) {
     if (!confirm(lang === "fa" ? "این پیام حذف شود؟" : "Delete this message?")) return;
-    const { error } = await supabase.from("reviews").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    qc.invalidateQueries({ queryKey: ["reviews", scopeKey] });
+    try {
+      await apiFetch(`/api/reviews/${id}`, { method: "DELETE" });
+      qc.invalidateQueries({ queryKey: ["reviews", scopeKey] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    }
   }
 
   const avgRating = useMemo(() => {
