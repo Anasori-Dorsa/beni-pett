@@ -9,7 +9,7 @@ import productDog from "@/assets/product-dog.jpg";
 import productCat from "@/assets/product-cat.jpg";
 import productTreats from "@/assets/product-treats.jpg";
 import { PawScatter } from "@/components/pet-decorations";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -31,15 +31,9 @@ function Index() {
   const { data: testimonials = [] } = useQuery({
     queryKey: ["home-testimonials"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reviews")
-        .select("id, author_name, content, rating")
-        .is("product_id", null)
-        .is("parent_id", null)
-        .order("created_at", { ascending: false })
-        .limit(4);
-      if (error) throw error;
-      return data ?? [];
+      return apiFetch<{ id: string; author_name: string; content: string; rating: number | null }[]>(
+        "/api/reviews?rootsOnly=1&limit=4",
+      );
     },
   });
 
