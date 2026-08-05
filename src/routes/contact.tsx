@@ -3,7 +3,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
+import { apiFetch } from "@/lib/api-client";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -57,9 +57,14 @@ function ContactPage() {
       subject: parsed.data.subject || null,
       message: parsed.data.message,
     };
-    const { error } = await supabase.from("contact_messages").insert(payload);
+    try {
+      await apiFetch("/api/contact", { method: "POST", body: payload });
+    } catch (err) {
+      setLoading(false);
+      toast.error(err instanceof Error ? err.message : "Failed");
+      return;
+    }
     setLoading(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(t("contact_success"));
     setForm({ name: "", email: "", phone: "", subject: "", message: "" });
   }
