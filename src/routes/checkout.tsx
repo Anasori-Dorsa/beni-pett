@@ -40,7 +40,7 @@ function CheckoutPage() {
 
   const shipping = subtotal >= 1000000 ? 0 : 80000;
   const total = subtotal + shipping;
-
+// src/routes/checkout.tsx  — فقط تابع submit تغییر کرده (بقیه‌ی فایل عیناً همان قبلی)
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!user) return;
@@ -70,14 +70,12 @@ function CheckoutPage() {
     }
 
     clear();
-    // Initiate Zibal payment
+    // Initiate Zibal payment — now handled entirely by the backend
     try {
-      const resp = await fetch("/api/public/zibal/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
-      const json = (await resp.json()) as { ok: boolean; redirectUrl?: string; error?: string };
+      const json = await apiFetch<{ ok: boolean; redirectUrl?: string; error?: string }>(
+        "/api/public/zibal/init",
+        { method: "POST", body: { orderId } },
+      );
       if (!json.ok || !json.redirectUrl) {
         toast.error(json.error ?? "Payment gateway error");
         setBusy(false);
@@ -87,7 +85,7 @@ function CheckoutPage() {
       window.location.href = json.redirectUrl;
     } catch (err) {
       setBusy(false);
-      toast.error("Payment gateway unreachable");
+      toast.error(err instanceof Error ? err.message : "Payment gateway unreachable");
     }
   }
 
